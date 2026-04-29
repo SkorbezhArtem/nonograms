@@ -72,17 +72,112 @@ const easy = [
   },
 ];
 
-export const ALL_TEMPLATES = [...easy];
+const medium = [
+  {
+    id: 'fish',
+    name: 'Fish',
+    difficulty: 'medium',
+    size: 10,
+    grid: parse([
+      '........##',
+      '.......###',
+      '..########',
+      '.#########',
+      '#####.####',
+      '#####.####',
+      '.#########',
+      '..########',
+      '.......###',
+      '........##',
+    ]),
+  },
+  {
+    id: 'heart-md',
+    name: 'Heart',
+    difficulty: 'medium',
+    size: 10,
+    grid: parse([
+      '..##..##..',
+      '.########.',
+      '##########',
+      '##########',
+      '##########',
+      '.########.',
+      '.########.',
+      '..######..',
+      '...####...',
+      '....##....',
+    ]),
+  },
+  {
+    id: 'tree',
+    name: 'Tree',
+    difficulty: 'medium',
+    size: 10,
+    grid: parse([
+      '....##....',
+      '...####...',
+      '..######..',
+      '.########.',
+      '##########',
+      '..######..',
+      '.########.',
+      '##########',
+      '....##....',
+      '....##....',
+    ]),
+  },
+  {
+    id: 'boat',
+    name: 'Boat',
+    difficulty: 'medium',
+    size: 10,
+    grid: parse([
+      '.....#....',
+      '....##....',
+      '...###....',
+      '..####....',
+      '.#####....',
+      '.#######..',
+      '##########',
+      '.########.',
+      '..######..',
+      '...####...',
+    ]),
+  },
+  {
+    id: 'apple',
+    name: 'Apple',
+    difficulty: 'medium',
+    size: 10,
+    grid: parse([
+      '....#.....',
+      '.....#....',
+      '..######..',
+      '.########.',
+      '##########',
+      '##########',
+      '##########',
+      '.########.',
+      '.########.',
+      '..######..',
+    ]),
+  },
+];
+
+export const ALL_TEMPLATES = [...easy, ...medium];
 
 export const BY_DIFFICULTY = {
   easy,
+  medium,
 };
 
 export const DIFFICULTY_LABELS = {
   easy: 'Easy (5x5)',
+  medium: 'Medium (10x10)',
 };
 
-export const DIFFICULTIES = ['easy'];
+export const DIFFICULTIES = ['easy', 'medium'];
 
 export function findTemplate(id) {
   return ALL_TEMPLATES.find((t) => t.id === id) || null;
