@@ -1,7 +1,7 @@
 import { ALL_TEMPLATES, BY_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS, findTemplate } from './data/templates.js';
 import { Game } from './game.js';
 import { Sounds } from './sounds.js';
-import { el, clear } from './ui.js';
+import { el, clear, icon, button, createSelect, createModal } from './ui.js';
 import {
   saveGame,
   loadGame,
@@ -21,41 +21,63 @@ const settings = Object.assign(
 
 Sounds.setMuted(settings.muted);
 
-// ----- Layout -----
-const root = el('div', { class: 'app' });
-
+// ----- Brand -----
+const brandLogo = el('span', { class: 'brand__logo' }, [icon('grid', { size: 22 })]);
 const title = el('h1', { class: 'title', text: 'Nonograms' });
+const brand = el('div', { class: 'brand' }, [brandLogo, title]);
 
-const difficultySelect = el('select', { class: 'select', id: 'difficulty' });
-for (const d of DIFFICULTIES) {
-  difficultySelect.appendChild(el('option', { value: d, text: DIFFICULTY_LABELS[d] }));
+// ----- Custom selects -----
+const levelSelect = createSelect({
+  options: DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABELS[d] })),
+  value: DIFFICULTIES.includes(settings.difficulty) ? settings.difficulty : 'easy',
+  icon: 'layers',
+  ariaLabel: 'Level',
+  onChange: (d) => {
+    const opts = BY_DIFFICULTY[d].map((t) => ({ value: t.id, label: t.name }));
+    templateSelect.setOptions(opts);
+    const first = BY_DIFFICULTY[d][0];
+    templateSelect.setValue(first.id);
+    startTemplate(first.id);
+  },
+});
+
+const initialDifficulty = levelSelect.getValue();
+const templateSelect = createSelect({
+  options: BY_DIFFICULTY[initialDifficulty].map((t) => ({ value: t.id, label: t.name })),
+  value: findTemplate(settings.templateId) ? settings.templateId : BY_DIFFICULTY[initialDifficulty][0].id,
+  icon: 'image',
+  ariaLabel: 'Template',
+  onChange: (id) => startTemplate(id),
+});
+
+// ----- Action buttons -----
+const randomBtn = button({ label: 'Random', iconName: 'shuffle', onClick: onRandom });
+const resetBtn = button({ label: 'Reset', iconName: 'rotate', onClick: () => game.reset() });
+const saveBtn = button({ label: 'Save', iconName: 'save', onClick: onSave });
+const continueBtn = button({ label: 'Continue', iconName: 'play', onClick: onContinue });
+const solutionBtn = button({ label: 'Solution', iconName: 'lightbulb', onClick: onSolution });
+const topBtn = button({ label: 'Top 5', iconName: 'trophy', variant: 'ghost', onClick: onOpenTop });
+const themeBtn = button({ iconOnly: true, iconName: 'moon', title: 'Toggle theme', onClick: onToggleTheme });
+const muteBtn = button({ iconOnly: true, iconName: 'volume-on', title: 'Toggle sound', onClick: onToggleMute });
+
+// ----- Toolbar groups -----
+function group(labelText, iconName, children) {
+  const label = el('span', { class: 'toolbar__label' }, [
+    icon(iconName, { size: 12, className: 'toolbar__label-icon' }),
+    el('span', { text: labelText }),
+  ]);
+  return el('div', { class: `toolbar__group toolbar__group--${labelText.toLowerCase()}` }, [label, ...children]);
 }
 
-const templateSelect = el('select', { class: 'select', id: 'template' });
-
-const themeBtn = el('button', { class: 'btn btn--icon', title: 'Toggle theme' });
-const muteBtn = el('button', { class: 'btn btn--icon', title: 'Toggle sound' });
-
-const resetBtn = el('button', { class: 'btn', text: 'Reset game' });
-const saveBtn = el('button', { class: 'btn', text: 'Save game' });
-const continueBtn = el('button', { class: 'btn', text: 'Continue last game' });
-const randomBtn = el('button', { class: 'btn', text: 'Random game' });
-const solutionBtn = el('button', { class: 'btn', text: 'Solution' });
-
-const controls = el('div', { class: 'controls' }, [
-  el('label', { class: 'label' }, ['Level', difficultySelect]),
-  el('label', { class: 'label' }, ['Template', templateSelect]),
-  randomBtn,
-  resetBtn,
-  saveBtn,
-  continueBtn,
-  solutionBtn,
-  themeBtn,
-  muteBtn,
+const toolbar = el('div', { class: 'toolbar' }, [
+  group('Puzzle', 'sparkles', [levelSelect.element, templateSelect.element, randomBtn]),
+  group('Game', 'clock', [resetBtn, saveBtn, continueBtn, solutionBtn]),
+  group('More', 'medal', [topBtn, themeBtn, muteBtn]),
 ]);
 
-const header = el('div', { class: 'header' }, [title, controls]);
+const header = el('header', { class: 'header' }, [brand, toolbar]);
 
+// ----- Status / board -----
 const timerLabel = el('div', { class: 'timer', id: 'timer', text: '00:00' });
 const messageBox = el('div', { class: 'message', id: 'message' });
 const statusbar = el('div', { class: 'statusbar panel' }, [timerLabel, messageBox]);
@@ -63,19 +85,16 @@ const statusbar = el('div', { class: 'statusbar panel' }, [timerLabel, messageBo
 const boardEl = el('div', { class: 'board', id: 'board' });
 const boardWrap = el('div', { class: 'board-wrap' }, [boardEl]);
 
-const scoresPanel = el('div', { class: 'panel' }, [
-  el('h3', { text: 'Top 5 results' }),
-  el('ol', { class: 'scores', id: 'scores' }),
-]);
+const layout = el('div', { class: 'layout' }, [boardWrap]);
 
-const sidebar = el('aside', { class: 'sidebar' }, [scoresPanel]);
-
-const layout = el('div', { class: 'layout' }, [boardWrap, sidebar]);
-
-root.appendChild(header);
-root.appendChild(statusbar);
-root.appendChild(layout);
+const root = el('div', { class: 'app' }, [header, statusbar, layout]);
 document.body.appendChild(root);
+
+// ----- Top results modal -----
+const scoresList = el('ol', { class: 'scores' });
+const topModal = createModal({ title: 'Top 5 results' });
+topModal.body.appendChild(scoresList);
+document.body.appendChild(topModal.element);
 
 // ----- Game instance -----
 const game = new Game({
@@ -96,21 +115,18 @@ const game = new Game({
   },
 });
 
-function renderTemplateOptions(difficulty) {
-  clear(templateSelect);
-  for (const t of BY_DIFFICULTY[difficulty]) {
-    templateSelect.appendChild(el('option', { value: t.id, text: t.name }));
-  }
-}
-
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  if (themeBtn) themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
+  clear(themeBtn);
+  themeBtn.appendChild(icon(theme === 'dark' ? 'sun' : 'moon', { size: 16 }));
+  themeBtn.title = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
 }
 
 function applyMute(muted) {
   Sounds.setMuted(muted);
-  muteBtn.textContent = muted ? '🔇' : '🔊';
+  clear(muteBtn);
+  muteBtn.appendChild(icon(muted ? 'volume-off' : 'volume-on', { size: 16 }));
+  muteBtn.title = muted ? 'Unmute sounds' : 'Mute sounds';
 }
 
 function persistSettings() {
@@ -127,42 +143,34 @@ function startTemplate(id) {
 }
 
 function renderScores(scores = loadScores()) {
-  const list = document.getElementById('scores');
-  clear(list);
+  clear(scoresList);
   if (!scores.length) {
-    list.appendChild(el('li', { class: 'empty', text: 'No results yet' }));
+    scoresList.appendChild(el('li', { class: 'scores__empty' }, [
+      icon('trophy', { size: 28, className: 'scores__empty-icon' }),
+      el('span', { text: 'No results yet' }),
+      el('small', { text: 'Solve a puzzle to claim a spot on the podium.' }),
+    ]));
     return;
   }
-  for (const s of scores) {
-    const left = el('span', { text: `${s.templateName} (${s.difficulty})` });
-    const right = el('span', { text: formatTime(s.seconds) });
-    list.appendChild(el('li', {}, [left, right]));
-  }
+  scores.forEach((s, i) => {
+    const rank = el('span', { class: `scores__rank scores__rank--${Math.min(i + 1, 3)}`, text: String(i + 1) });
+    const textBlock = el('div', { class: 'scores__text' }, [
+      el('span', { class: 'scores__name', text: s.templateName }),
+      el('span', { class: 'scores__diff', text: DIFFICULTY_LABELS[s.difficulty] || s.difficulty }),
+    ]);
+    const time = el('span', { class: 'scores__time' }, [
+      icon('clock', { size: 14, className: 'scores__time-icon' }),
+      el('span', { text: formatTime(s.seconds) }),
+    ]);
+    scoresList.appendChild(el('li', { class: 'scores__item' }, [rank, textBlock, time]));
+  });
 }
 
 function syncContinueButton() {
   continueBtn.disabled = !hasSavedGame();
-  continueBtn.style.opacity = continueBtn.disabled ? '0.5' : '1';
 }
 
-// ----- Wire controls -----
-difficultySelect.addEventListener('change', () => {
-  const d = difficultySelect.value;
-  renderTemplateOptions(d);
-  const first = BY_DIFFICULTY[d][0];
-  templateSelect.value = first.id;
-  startTemplate(first.id);
-});
-
-templateSelect.addEventListener('change', () => {
-  startTemplate(templateSelect.value);
-});
-
-resetBtn.addEventListener('click', () => {
-  game.reset();
-});
-
-saveBtn.addEventListener('click', () => {
+function onSave() {
   if (game.solved || game.frozen) return;
   saveGame(game.exportState());
   syncContinueButton();
@@ -170,9 +178,9 @@ saveBtn.addEventListener('click', () => {
   setTimeout(() => {
     if (messageBox.textContent === 'Game saved.') game.setMessage('');
   }, 1500);
-});
+}
 
-continueBtn.addEventListener('click', () => {
+function onContinue() {
   const state = loadGame();
   if (!state) return;
   const template = findTemplate(state.templateId);
@@ -180,39 +188,44 @@ continueBtn.addEventListener('click', () => {
   settings.templateId = template.id;
   settings.difficulty = template.difficulty;
   persistSettings();
-  difficultySelect.value = template.difficulty;
-  renderTemplateOptions(template.difficulty);
-  templateSelect.value = template.id;
+  levelSelect.setValue(template.difficulty);
+  templateSelect.setOptions(BY_DIFFICULTY[template.difficulty].map((t) => ({ value: t.id, label: t.name })));
+  templateSelect.setValue(template.id);
   game.setTemplate(template);
   game.loadState(state);
-});
+}
 
-randomBtn.addEventListener('click', () => {
+function onRandom() {
   const others = ALL_TEMPLATES.filter((t) => !game.template || t.id !== game.template.id);
   const pick = others[Math.floor(Math.random() * others.length)];
-  difficultySelect.value = pick.difficulty;
-  renderTemplateOptions(pick.difficulty);
-  templateSelect.value = pick.id;
+  levelSelect.setValue(pick.difficulty);
+  templateSelect.setOptions(BY_DIFFICULTY[pick.difficulty].map((t) => ({ value: t.id, label: t.name })));
+  templateSelect.setValue(pick.id);
   startTemplate(pick.id);
-});
+}
 
-solutionBtn.addEventListener('click', () => {
+function onSolution() {
   game.showSolution();
   clearSavedGame();
   syncContinueButton();
-});
+}
 
-themeBtn.addEventListener('click', () => {
+function onOpenTop() {
+  renderScores();
+  topModal.open();
+}
+
+function onToggleTheme() {
   settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
   applyTheme(settings.theme);
   persistSettings();
-});
+}
 
-muteBtn.addEventListener('click', () => {
+function onToggleMute() {
   settings.muted = !settings.muted;
   applyMute(settings.muted);
   persistSettings();
-});
+}
 
 // Disable native context menu on board to avoid right-click menu
 boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -221,12 +234,7 @@ boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
 applyMute(settings.muted);
 applyTheme(settings.theme);
 
-const initialDifficulty = DIFFICULTIES.includes(settings.difficulty) ? settings.difficulty : 'easy';
-difficultySelect.value = initialDifficulty;
-renderTemplateOptions(initialDifficulty);
 const initialTemplate = findTemplate(settings.templateId)
   || BY_DIFFICULTY[initialDifficulty][0];
-templateSelect.value = initialTemplate.id;
 game.setTemplate(initialTemplate);
-renderScores();
 syncContinueButton();
