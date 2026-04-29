@@ -15,6 +15,7 @@ export class Game {
     this.template = null;
     this.size = 0;
     this.userGrid = [];
+    this.cellEls = [];
     this.solved = false;
     this.frozen = false;
 
@@ -89,17 +90,16 @@ export class Game {
     const colPad = maxColClueLength(cClues);
 
     clear(this.boardEl);
+    this.cellEls = Array.from({ length: n }, () => Array(n).fill(null));
     this.boardEl.style.gridTemplateColumns = `repeat(${rowPad + n}, var(--cell-size))`;
     this.boardEl.style.gridTemplateRows = `repeat(${colPad + n}, var(--cell-size))`;
     this.boardEl.classList.toggle('solved', this.solved || this.frozen);
 
     // top section: corner + col clues
     for (let r = 0; r < colPad; r += 1) {
-      // corner (top-left)
       for (let c = 0; c < rowPad; c += 1) {
         this.boardEl.appendChild(el('div', { class: 'cell cell--corner' }));
       }
-      // top column clues row r
       for (let c = 0; c < n; c += 1) {
         const clue = cClues[c];
         const value = clue.length >= colPad - r ? clue[clue.length - (colPad - r)] : '';
@@ -124,24 +124,36 @@ export class Game {
         this.boardEl.appendChild(el('div', { class: classes.join(' '), text: value === 0 ? '' : String(value) }));
       }
       for (let c = 0; c < n; c += 1) {
-        const v = this.userGrid[r][c];
-        const classes = ['cell'];
-        if (v === STATE.FILLED) classes.push('cell--filled');
-        if (v === STATE.CROSS) classes.push('cell--cross');
-        if (c === 0) classes.push('div-left');
-        if (r === 0) classes.push('div-top');
-        if ((c + 1) % 5 === 0 && c + 1 !== n) classes.push('div-right');
-        if ((r + 1) % 5 === 0 && r + 1 !== n) classes.push('div-bottom');
         const cell = el('div', {
-          class: classes.join(' '),
+          class: this.cellClasses(r, c),
           'data-r': r,
           'data-c': c,
         });
         cell.addEventListener('click', (ev) => this.handleLeftClick(ev, r, c));
         cell.addEventListener('contextmenu', (ev) => this.handleRightClick(ev, r, c));
+        this.cellEls[r][c] = cell;
         this.boardEl.appendChild(cell);
       }
     }
+  }
+
+  cellClasses(r, c) {
+    const v = this.userGrid[r][c];
+    const classes = ['cell'];
+    if (v === STATE.FILLED) classes.push('cell--filled');
+    if (v === STATE.CROSS) classes.push('cell--cross');
+    if (c === 0) classes.push('div-left');
+    if (r === 0) classes.push('div-top');
+    const n = this.size;
+    if ((c + 1) % 5 === 0 && c + 1 !== n) classes.push('div-right');
+    if ((r + 1) % 5 === 0 && r + 1 !== n) classes.push('div-bottom');
+    return classes.join(' ');
+  }
+
+  updateCellVisual(r, c) {
+    const node = this.cellEls[r] && this.cellEls[r][c];
+    if (!node) return;
+    node.className = this.cellClasses(r, c);
   }
 
   handleLeftClick(ev, r, c) {
@@ -151,7 +163,7 @@ export class Game {
     this.userGrid[r][c] = next;
     if (next === STATE.FILLED) Sounds.fill();
     else Sounds.empty();
-    this.afterChange();
+    this.afterChange(r, c);
   }
 
   handleRightClick(ev, r, c) {
@@ -162,14 +174,14 @@ export class Game {
     this.userGrid[r][c] = next;
     if (next === STATE.CROSS) Sounds.cross();
     else Sounds.empty();
-    this.afterChange();
+    this.afterChange(r, c);
   }
 
-  afterChange() {
+  afterChange(r, c) {
     if (!this.timer.running && !this.solved && !this.frozen) {
       this.timer.start();
     }
-    this.render();
+    this.updateCellVisual(r, c);
     if (this.checkWin()) {
       this.handleWin();
     }
@@ -196,7 +208,7 @@ export class Game {
       ? `Great! You have solved the nonogram in ${seconds} seconds!`
       : 'Great! You have solved the nonogram!';
     this.setMessage(message);
-    this.render();
+    this.boardEl.classList.add('solved');
     this.onWin({ seconds, template: this.template });
   }
 }

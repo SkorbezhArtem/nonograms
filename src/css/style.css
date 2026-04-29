@@ -364,12 +364,18 @@ body::before {
   font-size: calc(var(--cell-size) * 0.5);
   line-height: 1;
   color: var(--cross);
-  transition: background 0.12s ease, transform 0.06s ease, box-shadow 0.18s ease;
+  transition: box-shadow 0.12s ease, transform 0.05s ease;
   position: relative;
 }
 
-.cell:hover:not(.cell--clue):not(.cell--corner) {
+.cell:hover:not(.cell--clue):not(.cell--corner):not(.cell--filled):not(.cell--cross) {
   background: var(--cell-hover);
+  box-shadow: 0 4px 12px -6px var(--filled-glow);
+  z-index: 2;
+}
+
+.cell--filled:hover,
+.cell--cross:hover {
   box-shadow: 0 4px 12px -6px var(--filled-glow);
   z-index: 2;
 }
