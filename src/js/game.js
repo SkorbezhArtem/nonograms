@@ -77,7 +77,18 @@ export class Game {
   }
 
   setMessage(text) {
-    this.messageEl.textContent = text || '';
+    const next = text || '';
+    if (this.messageEl.textContent === next) return;
+    this.messageEl.textContent = next;
+    if (next) {
+      this.messageEl.classList.remove('message--in');
+      // trigger reflow so animation restarts
+      // eslint-disable-next-line no-unused-expressions
+      this.messageEl.offsetWidth;
+      this.messageEl.classList.add('message--in');
+    } else {
+      this.messageEl.classList.remove('message--in');
+    }
   }
 
   render() {
