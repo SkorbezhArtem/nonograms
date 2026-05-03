@@ -102,6 +102,7 @@ export class Game {
 
     clear(this.boardEl);
     this.cellEls = Array.from({ length: n }, () => Array(n).fill(null));
+    this.boardEl.dataset.size = String(n);
     this.boardEl.style.gridTemplateColumns = `repeat(${rowPad + n}, var(--cell-size))`;
     this.boardEl.style.gridTemplateRows = `repeat(${colPad + n}, var(--cell-size))`;
     this.boardEl.classList.toggle('solved', this.solved || this.frozen);
