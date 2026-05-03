@@ -99,7 +99,7 @@ export function createSelect({ options, value, onChange, icon: iconName, ariaLab
   const pop = el('div', { class: 'popover', role: 'listbox' });
   pop.hidden = true;
 
-  const wrap = el('div', { class: 'cselect-wrap' }, [trigger, pop]);
+  const wrap = el('div', { class: 'cselect-wrap' }, [trigger]);
 
   let currentValue = value;
   let currentOptions = options || [];
@@ -134,18 +134,47 @@ export function createSelect({ options, value, onChange, icon: iconName, ariaLab
   }
 
   function onDocClick(ev) {
-    if (!wrap.contains(ev.target)) close();
+    if (!wrap.contains(ev.target) && !pop.contains(ev.target)) close();
   }
   function onKey(ev) {
     if (ev.key === 'Escape') close();
   }
+  function onReposition() {
+    if (pop.hidden) return;
+    positionPopover();
+  }
+  function positionPopover() {
+    const rect = trigger.getBoundingClientRect();
+    pop.style.minWidth = `${rect.width}px`;
+    const margin = 8;
+    const viewportH = window.innerHeight;
+    const viewportW = window.innerWidth;
+    pop.style.maxHeight = '';
+    pop.style.left = `${Math.max(8, Math.min(rect.left, viewportW - rect.width - 8))}px`;
+    const spaceBelow = viewportH - rect.bottom - margin - 8;
+    const spaceAbove = rect.top - margin - 8;
+    const popH = pop.offsetHeight;
+    if (popH > spaceBelow && spaceAbove > spaceBelow) {
+      pop.style.top = '';
+      pop.style.bottom = `${viewportH - rect.top + margin}px`;
+      pop.style.maxHeight = `${spaceAbove}px`;
+    } else {
+      pop.style.bottom = '';
+      pop.style.top = `${rect.bottom + margin}px`;
+      pop.style.maxHeight = `${Math.max(160, spaceBelow)}px`;
+    }
+  }
   function open() {
+    if (!pop.isConnected) document.body.appendChild(pop);
     pop.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
     wrap.classList.add('is-open');
+    positionPopover();
     setTimeout(() => {
       document.addEventListener('mousedown', onDocClick, true);
       document.addEventListener('keydown', onKey);
+      window.addEventListener('resize', onReposition);
+      window.addEventListener('scroll', onReposition, true);
     }, 0);
   }
   function close() {
@@ -154,6 +183,8 @@ export function createSelect({ options, value, onChange, icon: iconName, ariaLab
     wrap.classList.remove('is-open');
     document.removeEventListener('mousedown', onDocClick, true);
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', onReposition);
+    window.removeEventListener('scroll', onReposition, true);
   }
 
   trigger.addEventListener('click', (ev) => {
