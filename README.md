@@ -7,15 +7,28 @@ JavaScript. No frameworks, no jQuery, no `alert`/`prompt`/`confirm`.
 
 **Task:** [RSS Nonograms](https://github.com/rolling-scopes-school/tasks/blob/fce6d6aa1de9464c32de51a1849efad62652a2e3/tasks/nonograms/README.md)
 
+![Nonograms — dark theme, hard 15x15 sailboat](docs/screenshot.png)
+
 ## Run locally
 
-```bash
-git clone https://github.com/SkorbezhArtem/nonograms.git
-cd nonograms
-python3 -m http.server 8080   # or: npx http-server . -p 8080
-```
+The project is a static page with ES modules, so any static file server works.
+The simplest workflow is the **Live Server** extension for VS Code:
 
-then open http://localhost:8080.
+1. Clone the repo and open the folder in VS Code:
+   ```bash
+   git clone https://github.com/SkorbezhArtem/nonograms.git
+   code nonograms
+   ```
+2. Install the
+   [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer)
+   extension (by Ritwick Dey).
+3. Right-click `index.html` and choose **Open with Live Server** (or click the
+   _Go Live_ button in the status bar). The browser will open the app at
+   `http://127.0.0.1:5500/` with hot reload on save.
+
+Any other lightweight static server (e.g. WebStorm's built-in server, the
+`Live Preview` extension, `npx http-server .`) will work the same way — there
+is no build step.
 
 ## Implemented requirements
 
