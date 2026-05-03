@@ -351,6 +351,7 @@ body::before {
   justify-content: center;
   gap: 6px;
   text-align: center;
+  margin: 0 auto;
   padding: 18px 20px 14px;
   position: relative;
   overflow: hidden;
